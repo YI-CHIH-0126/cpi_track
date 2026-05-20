@@ -27,3 +27,9 @@
 
 - **WHEN** 新的價格紀錄成功提交
 - **THEN** 前端重新整理顯示列表，讓新資料出現在頁面上
+
+## Specification: Price Tracking UI
+
+### General Requirements
+
+- All JavaScript files SHALL use the `module` type to ensure ES module syntax compatibility.
