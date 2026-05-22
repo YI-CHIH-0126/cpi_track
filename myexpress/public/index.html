@@ -1,13 +1,159 @@
 <html>
+  <head>
+    <title>Express</title>
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+  </head>
 
-<head>
-  <title>Express</title>
-  <link rel="stylesheet" href="/stylesheets/style.css">
-</head>
+  <body>
+    <h1>價格追蹤應用程式</h1>
+    <form id="price-form">
+      <label for="price">價格：</label>
+      <input type="number" id="price" name="price" required />
 
-<body>
-  <h1>Express</h1>
-  <p>Welcome to Express</p>
-</body>
+      <label for="date">日期：</label>
+      <input type="date" id="date" name="date" required />
 
+      <button type="submit">提交</button>
+    </form>
+
+    <h2>價格紀錄</h2>
+    <table id="price-table" border="1">
+      <thead>
+        <tr>
+          <th>價格</th>
+          <th>日期</th>
+          <th>價格變化</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 價格紀錄將顯示在這裡 -->
+      </tbody>
+    </table>
+
+    <script>
+      document
+        .getElementById("price-form")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const price = parseFloat(document.getElementById("price").value);
+          const date = document.getElementById("date").value;
+
+          // Frontend validation
+          if (isNaN(price) || price <= 0) {
+            alert("價格必須是正數");
+            return;
+          }
+
+          const today = new Date().toISOString().split("T")[0];
+          if (date > today) {
+            alert("日期不能是未來的日期");
+            return;
+          }
+
+          try {
+            const response = await fetch("/api/prices", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                price: price,
+                record_date: date,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error("提交失敗，請稍後再試");
+            }
+
+            const result = await response.json();
+            alert("提交成功！");
+
+            // 清空表單
+            document.getElementById("price-form").reset();
+
+            // 重新讀取並渲染表格以確保計算正確
+            await fetchPriceRecords();
+          } catch (error) {
+            alert(error.message);
+          }
+        });
+
+      // Fetch and display existing price records on page load
+      async function fetchPriceRecords() {
+        try {
+          const response = await fetch("/api/prices");
+          if (!response.ok) {
+            throw new Error("無法獲取價格紀錄，請稍後再試");
+          }
+
+          const data = await response.json();
+          const priceTableBody = document.querySelector("#price-table tbody");
+          priceTableBody.innerHTML = ""; // 清空表格內容
+
+          // Sort records by record_date in descending order (most recent first)
+          data.data.sort(
+            (a, b) => new Date(b.record_date) - new Date(a.record_date),
+          );
+
+          data.data.forEach((record, index) => {
+            const row = document.createElement("tr");
+
+            const priceCell = document.createElement("td");
+            priceCell.textContent = record.price;
+            row.appendChild(priceCell);
+
+            const dateCell = document.createElement("td");
+            dateCell.textContent = record.record_date;
+            row.appendChild(dateCell);
+
+            const changeCell = document.createElement("td");
+
+            // Compare with the older record (which is at index + 1 due to descending sort)
+            if (index < data.data.length - 1) {
+              const olderRecord = data.data[index + 1];
+              const change = record.price - olderRecord.price;
+              changeCell.textContent = change > 0 ? `+${change}` : `${change}`;
+            } else {
+              changeCell.textContent = "-"; // Oldest record, no previous data
+            }
+            row.appendChild(changeCell);
+
+            priceTableBody.appendChild(row);
+          });
+
+          // Re-fetch and re-render the table after adding a new record
+          async function refreshTable() {
+            const response = await fetch("/api/prices");
+            const data = await response.json();
+            fetchPriceRecords(data); // Re-render the table with updated data
+          }
+
+          // Update the table after a successful addition
+          async function addRecordAndRefresh(newRecord) {
+            const response = await fetch("/api/prices", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(newRecord),
+            });
+
+            if (response.ok) {
+              refreshTable(); // Refresh the table to include the new record
+            } else {
+              alert("新增失敗，請稍後再試");
+            }
+          }
+        } catch (error) {
+          console.error(error);
+          alert(error.message);
+        }
+      }
+
+      // Call the function to fetch and display records
+      fetchPriceRecords();
+    </script>
+  </body>
 </html>

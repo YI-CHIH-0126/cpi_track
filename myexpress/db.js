@@ -19,10 +19,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
 const createTableQuery = `
 CREATE TABLE IF NOT EXISTS price_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  product_name TEXT NOT NULL,
   price REAL NOT NULL,
-  record_date TEXT NOT NULL,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  record_date TEXT NOT NULL UNIQUE
 );
 `;
 
